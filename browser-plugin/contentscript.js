@@ -3,57 +3,64 @@
 listenForUrlParamsChange();
 
 function listenForUrlParamsChange() {
-  InitJiraFilters();
-  window.setTimeout(listenForUrlParamsChange, 1000);
+    InitJiraFilters();
+    window.setTimeout(listenForUrlParamsChange, 1000);
 }
 
 function InitJiraFilters() {
-	var alreadyAdded = document.querySelector('#custom_jira_filters');
-	if(alreadyAdded){
-		return;
-	}
+    var alreadyAdded = document.querySelector('#custom_jira_filters');
+    if (alreadyAdded) {
+        return;
+    }
 
-	var notReady = !document.querySelector('.subnav-container') || document.querySelectorAll('.ghx-avatar-img').length == 0;
-	if(notReady){
-		window.setTimeout(InitJiraFilters, 500);
-		return;
-	}
+    var notReady = !document.querySelector('.subnav-container') || document.querySelectorAll('.ghx-avatar-img').length == 0;
+    if (notReady) {
+        window.setTimeout(InitJiraFilters, 500);
+        return;
+    }
 
     console.log('InitJiraFilters');
+
     function filterNow(name) {
         var isBacklog = (new URL(location.href).searchParams.get("view") || '').toLowerCase().indexOf('planning') >= 0;
         console.log('filtering now ' + name + ' in backlog: ' + isBacklog);
 
         if (isBacklog) {
-            filter(name, '.ghx-issue-compact div *.ghx-estimate', function(el) {
+            filter(name, '.ghx-issue-compact div *.ghx-estimate', function (el) {
                 return el.parentElement.parentElement.parentElement
             });
         } else {
-            filter(name, 'div[data-issue-key] .ghx-avatar', function(el) {
+            filter(name, 'div[data-issue-key] .ghx-avatar', function (el) {
                 return el.parentElement.parentElement;
             });
         }
     }
 
     function filter(name, selector, elementToHideFn) {
-        document.querySelectorAll(selector).forEach(x=>{
-            //handle unassigned issues
-            var assigne = x.childNodes.length > 0 && x.childNodes[0].getAttribute('data-tooltip') || '';
-            var elementToHide = elementToHideFn(x);
-            elementToHide.style.display = (name == '' || name == assigne) ? '' : 'none';
-            //elementToHide.style.border = (name == '' || name == assigne) ? 'solid 1px green' : 'solid 1px red';
-        }
+        document.querySelectorAll(selector).forEach(x => {
+                //handle unassigned issues
+                var assigneNameOfElement = x.childNodes.length > 0 && getAssigneName(x.childNodes[0]);
+                var elementToHide = elementToHideFn(x);
+                elementToHide.style.display = (name == '' || name == assigneNameOfElement) ? '' : 'none';
+                //debug: elementToHide.style.border = (name == '' || name == assigne) ? 'solid 1px green' : 'solid 1px red';
+            }
         );
+    }
+
+    function getAssigneName(el) {
+        var assigne = el.getAttribute('data-tooltip');
+        assigne = assigne ?? ((el.title || el.alt).split(": ").length && (el.title || el.alt).split(": ")[1])
+        return assigne;
     }
 
     var avatars = new Map();
 
-    document.querySelectorAll('.ghx-avatar-img').forEach(x=>{
-        var assigne = x.getAttribute('data-tooltip');
-        if (assigne.length < 80) {
-            avatars.set(assigne, x);
+    document.querySelectorAll('.ghx-avatar-img').forEach(x => {
+            var assigne = getAssigneName(x);
+            if (assigne.length < 80) {
+                avatars.set(assigne, x);
+            }
         }
-    }
     );
 
     console.log(avatars, avatars);
@@ -70,7 +77,7 @@ function InitJiraFilters() {
     }
 
     var container = document.createElement('span');
-	container.id = "custom_jira_filters";
+    container.id = "custom_jira_filters";
     container.style = "padding-left:15px;";
 
     for (var element of avatars.values()) {
@@ -80,9 +87,9 @@ function InitJiraFilters() {
         if (el.tagName.toLowerCase() == 'span') {
             el.innerText = element.innerText;
         }
-        el.addEventListener('click', function(e) {
+        el.addEventListener('click', function (e) {
             markFilteredAvatar(e.currentTarget);
-            filterNow(e.currentTarget.getAttribute('data-tooltip'))
+            filterNow(getAssigneName(e.currentTarget))
         });
 
         container.appendChild(el);
@@ -90,11 +97,11 @@ function InitJiraFilters() {
 
     var clear = document.createElement('span');
     clear.classList.add('aui-button');
-	clear.style["vertical-align"] = 'middle';
-	clear.style["margin-left"] = '3px';
+    clear.style["vertical-align"] = 'middle';
+    clear.style["margin-left"] = '3px';
 
     clear.innerText = 'Clear Filter';
-    clear.addEventListener('click', function(e) {
+    clear.addEventListener('click', function (e) {
         markFilteredAvatar(null);
         filterNow('')
     });
@@ -103,11 +110,12 @@ function InitJiraFilters() {
     var t = document.querySelector('.subnav-container');
     t.appendChild(container);
 }
-    //some css hover effect when hover over the avatars
-    var style = document.createElement('style');
-    style.type = 'text/css';
 
-    style.innerHTML = `
+//some css hover effect when hover over the avatars
+var style = document.createElement('style');
+style.type = 'text/css';
+
+style.innerHTML = `
     .mp_m_blurb_vertical_wobble:hover {
             -webkit-animation-name: hvr-wobble-vertical-sm;
             animation-name: hvr-wobble-vertical-sm;
@@ -137,4 +145,4 @@ function InitJiraFilters() {
         100% {
             -webkit-transform: translateY(0);
             transform: translateY(0);}}`;
-    document.getElementsByTagName('head')[0].appendChild(style);
+document.getElementsByTagName('head')[0].appendChild(style);
