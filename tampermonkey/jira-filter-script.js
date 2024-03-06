@@ -1,125 +1,132 @@
 // ==UserScript==
 // @name         Jira Filter By Team Member
-// @namespace    https://github.com/steffstefferson/jira-filter/tree/main/browser-plugin
-// @version      1.1
+// @namespace    http://tampermonkey.net/
+// @version      1.2
 // @description  filtering issues by team member in active sprint and backlog
 // @author       Stef Käser
-// @match        https://change.this.to.your.jiraurl.com/*
+// @match        https://jira.post.ch/*
 // @grant        none
 // ==/UserScript==
 
 (function() {
 
 //register url change events
-    listenForUrlParamsChange();
+listenForUrlParamsChange();
 
-    function listenForUrlParamsChange() {
-        InitJiraFilters();
-        window.setTimeout(listenForUrlParamsChange, 1000);
-    }
+function listenForUrlParamsChange() {
+  InitJiraFilters();
+  window.setTimeout(listenForUrlParamsChange, 1000);
+}
 
-    function InitJiraFilters() {
-        var alreadyAdded = document.querySelector('#custom_jira_filters');
-        if(alreadyAdded){
-            return;
-        }
+function InitJiraFilters() {
+	var alreadyAdded = document.querySelector('#custom_jira_filters');
+	if(alreadyAdded){
+		return;
+	}
 
-        var notReady = !document.querySelector('.subnav-container') || document.querySelectorAll('.ghx-avatar-img').length == 0;
-        if(notReady){
-            window.setTimeout(InitJiraFilters, 500);
-            return;
-        }
+	var notReady = !document.querySelector('.subnav-container') || document.querySelectorAll('.ghx-avatar-img').length == 0;
+	if(notReady){
+		window.setTimeout(InitJiraFilters, 500);
+		return;
+	}
 
-        console.log('InitJiraFilters');
-        function filterNow(name) {
-            var isBacklog = (new URL(location.href).searchParams.get("view") || '').toLowerCase().indexOf('planning') >= 0;
-            console.log('filtering now ' + name + ' in backlog: ' + isBacklog);
+    var isBacklog = (new URL(location.href).searchParams.get("view") || '').toLowerCase().indexOf('planning') >= 0;
+    console.log('InitJiraFilters isBacklog'+isBacklog);
 
-            if (isBacklog) {
-                filter(name, '.ghx-issue-compact div *.ghx-estimate', function(el) {
-                    return el.parentElement.parentElement.parentElement
-                });
-            } else {
-                filter(name, 'div[data-issue-key] .ghx-avatar', function(el) {
-                    return el.parentElement.parentElement;
-                });
-            }
-        }
+    function filterNow(name) {
+        console.log('filtering now ' + name + ' in backlog: ' + isBacklog);
 
-        function filter(name, selector, elementToHideFn) {
-            document.querySelectorAll(selector).forEach(x=>{
-                    //handle unassigned issues
-                    var assigneNameOfElement = x.childNodes.length > 0 && getAssigneName(x.childNodes[0]);
-                    var elementToHide = elementToHideFn(x);
-                    elementToHide.style.display = (name == '' || name == assigneNameOfElement) ? '' : 'none';
-                    //debug: elementToHide.style.border = (name == '' || name == assigne) ? 'solid 1px green' : 'solid 1px red';
-                }
-            );
-        }
-
-        function getAssigneName(el){
-            var assigne = el.getAttribute('data-tooltip');
-            assigne = assigne ?? ((el.title || el.alt).split(": ").length && (el.title || el.alt).split(": ")[1])
-            return assigne;
-        }
-
-        var avatars = new Map();
-
-        document.querySelectorAll('.ghx-avatar-img').forEach(x=>{
-                var assigne = getAssigneName(x);
-                if (assigne.length < 80) {
-                    avatars.set(assigne, x);
-                }
-            }
-        );
-
-        console.log(avatars, avatars);
-        var lastFilter = null;
-
-        function markFilteredAvatar(el) {
-            if (lastFilter) {
-                lastFilter.style.border = "solid 3px white";
-            }
-            lastFilter = el;
-            if (el) {
-                el.style.border = "solid 3px lightgreen";
-            }
-        }
-
-        var container = document.createElement('span');
-        container.id = "custom_jira_filters";
-        container.style = "padding-left:15px;";
-
-        for (var element of avatars.values()) {
-            var el = element.cloneNode();
-            el.classList.add('mp_m_blurb_vertical_wobble');
-            el.style.border = "solid 3px white";
-            if (el.tagName.toLowerCase() == 'span') {
-                el.innerText = element.innerText;
-            }
-            el.addEventListener('click', function(e) {
-                markFilteredAvatar(e.currentTarget);
-                filterNow(getAssigneName(e.currentTarget))
+        if (isBacklog) {
+            filter(name, '.ghx-issue-compact div *.ghx-estimate', function(el) {
+                return el.parentElement.parentElement.parentElement
             });
-
-            container.appendChild(el);
+        } else {
+            filter(name, 'div[data-issue-key] .ghx-avatar', function(el) {
+                return el.parentElement.parentElement;
+            });
         }
-
-        var clear = document.createElement('span');
-        clear.classList.add('aui-button');
-        clear.style["vertical-align"] = 'middle';
-        clear.style["margin-left"] = '3px';
-
-        clear.innerText = 'Clear Filter';
-        clear.addEventListener('click', function(e) {
-            markFilteredAvatar(null);
-            filterNow('')
-        });
-        container.appendChild(clear);
-
-        var t = document.querySelector('.subnav-container');
-        t.appendChild(container);
     }
+
+    function filter(name, selector, elementToHideFn) {
+        document.querySelectorAll(selector).forEach(x=>{
+            //handle unassigned issues
+            var assigneNameOfElement = x.childNodes.length > 0 && getAssigneName(x.childNodes[0]);
+            var elementToHide = elementToHideFn(x);
+            elementToHide.style.display = (name == '' || name == assigneNameOfElement) ? '' : 'none';
+            //debug: elementToHide.style.border = (name == '' || name == assigne) ? 'solid 1px green' : 'solid 1px red';
+        }
+        );
+    }
+
+    function getAssigneName(el){
+        var assigne = '';
+        if(isBacklog){
+            // expected alt text is: "John Doe, IT1.22's avatar"
+            assigne = (el.alt || '').replace("'s avatar","");
+        }else{
+            // expected title text is: "Assignee: John Doe, IT1.22"
+            assigne = (el.title || el.alt).split(": ").length && (el.title || el.alt).split(": ")[1]
+        }
+        return assigne.replace("Assignee: ","");
+    }
+
+    var avatars = new Map();
+
+    document.querySelectorAll('.ghx-avatar-img').forEach(x=>{
+        var assigne = getAssigneName(x);
+        if (assigne.length < 80) {
+            avatars.set(assigne, x);
+        }
+    }
+    );
+
+    console.log(avatars, avatars);
+    var lastFilter = null;
+
+    function markFilteredAvatar(el) {
+        if (lastFilter) {
+            lastFilter.style.border = "solid 3px white";
+        }
+        lastFilter = el;
+        if (el) {
+            el.style.border = "solid 3px lightgreen";
+        }
+    }
+
+    var container = document.createElement('span');
+	container.id = "custom_jira_filters";
+    container.style = "padding-left:15px;";
+
+    for (var element of avatars.values()) {
+        var el = element.cloneNode();
+        el.classList.add('mp_m_blurb_vertical_wobble');
+        el.style.border = "solid 3px white";
+        if (el.tagName.toLowerCase() == 'span') {
+            el.innerText = element.innerText;
+        }
+        el.addEventListener('click', function(e) {
+            markFilteredAvatar(e.currentTarget);
+            filterNow(getAssigneName(e.currentTarget))
+        });
+
+        container.appendChild(el);
+    }
+
+    var clear = document.createElement('span');
+    clear.classList.add('aui-button');
+	clear.style["vertical-align"] = 'middle';
+	clear.style["margin-left"] = '3px';
+
+    clear.innerText = 'Clear Filter';
+    clear.addEventListener('click', function(e) {
+        markFilteredAvatar(null);
+        filterNow('')
+    });
+    container.appendChild(clear);
+
+    var t = document.querySelector('.subnav-container');
+    t.appendChild(container);
+}
     //some css hover effect when hover over the avatars
     var style = document.createElement('style');
     style.type = 'text/css';
