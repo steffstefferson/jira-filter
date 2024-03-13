@@ -8,49 +8,55 @@ function listenForUrlParamsChange() {
 }
 
 function InitJiraFilters() {
-    var alreadyAdded = document.querySelector('#custom_jira_filters');
-    if (alreadyAdded) {
-        return;
-    }
+	var alreadyAdded = document.querySelector('#custom_jira_filters');
+	if(alreadyAdded){
+		return;
+	}
 
-    var notReady = !document.querySelector('.subnav-container') || document.querySelectorAll('.ghx-avatar-img').length == 0;
-    if (notReady) {
-        window.setTimeout(InitJiraFilters, 500);
-        return;
-    }
+	var notReady = !document.querySelector('.subnav-container') || document.querySelectorAll('.ghx-avatar-img').length == 0;
+	if(notReady){
+		window.setTimeout(InitJiraFilters, 500);
+		return;
+	}
 
-    console.log('InitJiraFilters');
+    var isBacklog = (new URL(location.href).searchParams.get("view") || '').toLowerCase().indexOf('planning') >= 0;
+    console.log('InitJiraFilters isBacklog'+isBacklog);
 
     function filterNow(name) {
-        var isBacklog = (new URL(location.href).searchParams.get("view") || '').toLowerCase().indexOf('planning') >= 0;
         console.log('filtering now ' + name + ' in backlog: ' + isBacklog);
 
         if (isBacklog) {
-            filter(name, '.ghx-issue-compact div *.ghx-estimate', function (el) {
+            filter(name, '.ghx-issue-compact div *.ghx-estimate', function(el) {
                 return el.parentElement.parentElement.parentElement
             });
         } else {
-            filter(name, 'div[data-issue-key] .ghx-avatar', function (el) {
+            filter(name, 'div[data-issue-key] .ghx-avatar', function(el) {
                 return el.parentElement.parentElement;
             });
         }
     }
-
+    
     function filter(name, selector, elementToHideFn) {
-        document.querySelectorAll(selector).forEach(x => {
-                //handle unassigned issues
-                var assigneNameOfElement = x.childNodes.length > 0 && getAssigneName(x.childNodes[0]);
-                var elementToHide = elementToHideFn(x);
-                elementToHide.style.display = (name == '' || name == assigneNameOfElement) ? '' : 'none';
-                //debug: elementToHide.style.border = (name == '' || name == assigne) ? 'solid 1px green' : 'solid 1px red';
-            }
+        document.querySelectorAll(selector).forEach(x=>{
+            //handle unassigned issues
+            var assigneNameOfElement = x.childNodes.length > 0 && getAssigneName(x.childNodes[0]);
+            var elementToHide = elementToHideFn(x);
+            elementToHide.style.display = (name == '' || name == assigneNameOfElement) ? '' : 'none';
+            //debug: elementToHide.style.border = (name == '' || name == assigne) ? 'solid 1px green' : 'solid 1px red';
+        }
         );
     }
 
-    function getAssigneName(el) {
-        var assigne = el.getAttribute('data-tooltip');
-        assigne = assigne ?? ((el.title || el.alt).split(": ").length && (el.title || el.alt).split(": ")[1])
-        return assigne;
+    function getAssigneName(el){
+        var assigne = '';
+        if(isBacklog){
+            // expected alt text is: "John Doe, IT1.22's avatar"
+            assigne = (el.alt || '').replace("'s avatar","");
+        }else{
+            // expected title text is: "Assignee: John Doe, IT1.22"
+            assigne = (el.title || el.alt).split(": ").length && (el.title || el.alt).split(": ")[1]
+        }
+        return assigne.replace("Assignee: ","");
     }
 
     var avatars = new Map();
@@ -101,7 +107,7 @@ function InitJiraFilters() {
     clear.style["margin-left"] = '3px';
 
     clear.innerText = 'Clear Filter';
-    clear.addEventListener('click', function (e) {
+    clear.addEventListener('click', function(e) {
         markFilteredAvatar(null);
         filterNow('')
     });
@@ -111,7 +117,7 @@ function InitJiraFilters() {
     t.appendChild(container);
 }
 
-//some css hover effect when hover over the avatars
+// some css hover effect when hover over the avatars
 var style = document.createElement('style');
 style.type = 'text/css';
 
