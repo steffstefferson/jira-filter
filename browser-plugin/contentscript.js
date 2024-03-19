@@ -3,8 +3,8 @@
 listenForUrlParamsChange();
 
 function listenForUrlParamsChange() {
-    InitJiraFilters();
-    window.setTimeout(listenForUrlParamsChange, 1000);
+  InitJiraFilters();
+  window.setTimeout(listenForUrlParamsChange, 1000);
 }
 
 function InitJiraFilters() {
@@ -35,7 +35,7 @@ function InitJiraFilters() {
             });
         }
     }
-    
+
     function filter(name, selector, elementToHideFn) {
         document.querySelectorAll(selector).forEach(x=>{
             //handle unassigned issues
@@ -50,23 +50,23 @@ function InitJiraFilters() {
     function getAssigneName(el){
         var assigne = '';
         if(isBacklog){
-            // expected alt text is: "John Doe, IT1.22's avatar"
-            assigne = (el.alt || '').replace("'s avatar","");
+            // expected alt text is: "John Doe, IT1.22's avatar", "Profilbild von John Doe, IT1.22"
+            assigne = (el.alt || '').replace("'s avatar","").replace("Profilbild von ","");
         }else{
-            // expected title text is: "Assignee: John Doe, IT1.22"
+            // expected title text is: "Assignee: John Doe, IT1.22", "Bearbeiter: John Doe, IT1.22"
             assigne = (el.title || el.alt).split(": ").length && (el.title || el.alt).split(": ")[1]
         }
-        return assigne.replace("Assignee: ","");
+        return assigne.replace("Assignee: ","").replace("Bearbeiter: ","");
     }
 
     var avatars = new Map();
 
-    document.querySelectorAll('.ghx-avatar-img').forEach(x => {
-            var assigne = getAssigneName(x);
-            if (assigne.length < 80) {
-                avatars.set(assigne, x);
-            }
+    document.querySelectorAll('.ghx-avatar-img').forEach(x=>{
+        var assigne = getAssigneName(x);
+        if (assigne.length < 80) {
+            avatars.set(assigne, x);
         }
+    }
     );
 
     console.log(avatars, avatars);
@@ -83,7 +83,7 @@ function InitJiraFilters() {
     }
 
     var container = document.createElement('span');
-    container.id = "custom_jira_filters";
+	container.id = "custom_jira_filters";
     container.style = "padding-left:15px;";
 
     for (var element of avatars.values()) {
@@ -93,7 +93,7 @@ function InitJiraFilters() {
         if (el.tagName.toLowerCase() == 'span') {
             el.innerText = element.innerText;
         }
-        el.addEventListener('click', function (e) {
+        el.addEventListener('click', function(e) {
             markFilteredAvatar(e.currentTarget);
             filterNow(getAssigneName(e.currentTarget))
         });
@@ -103,8 +103,8 @@ function InitJiraFilters() {
 
     var clear = document.createElement('span');
     clear.classList.add('aui-button');
-    clear.style["vertical-align"] = 'middle';
-    clear.style["margin-left"] = '3px';
+	clear.style["vertical-align"] = 'middle';
+	clear.style["margin-left"] = '3px';
 
     clear.innerText = 'Clear Filter';
     clear.addEventListener('click', function(e) {
@@ -116,12 +116,11 @@ function InitJiraFilters() {
     var t = document.querySelector('.subnav-container');
     t.appendChild(container);
 }
+    //some css hover effect when hover over the avatars
+    var style = document.createElement('style');
+    style.type = 'text/css';
 
-// some css hover effect when hover over the avatars
-var style = document.createElement('style');
-style.type = 'text/css';
-
-style.innerHTML = `
+    style.innerHTML = `
     .mp_m_blurb_vertical_wobble:hover {
             -webkit-animation-name: hvr-wobble-vertical-sm;
             animation-name: hvr-wobble-vertical-sm;
@@ -151,4 +150,4 @@ style.innerHTML = `
         100% {
             -webkit-transform: translateY(0);
             transform: translateY(0);}}`;
-document.getElementsByTagName('head')[0].appendChild(style);
+    document.getElementsByTagName('head')[0].appendChild(style);
