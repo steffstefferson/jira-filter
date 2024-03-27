@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Filter By Team Member
 // @namespace    http://tampermonkey.net/
-// @version      1.2.1
+// @version      1.2.2
 // @description  filtering issues by team member in active sprint and backlog
 // @author       Stef Käser
 // @match        https://jira.post.ch/*
@@ -12,30 +12,30 @@
 
     //register url change events
     listenForUrlParamsChange();
-    
+
     function listenForUrlParamsChange() {
       InitJiraFilters();
       window.setTimeout(listenForUrlParamsChange, 1000);
     }
-    
+
     function InitJiraFilters() {
         var alreadyAdded = document.querySelector('#custom_jira_filters');
         if(alreadyAdded){
             return;
         }
-    
+
         var notReady = !document.querySelector('.subnav-container') || document.querySelectorAll('.ghx-avatar-img').length == 0;
         if(notReady){
             window.setTimeout(InitJiraFilters, 500);
             return;
         }
-    
+
         var isBacklog = (new URL(location.href).searchParams.get("view") || '').toLowerCase().indexOf('planning') >= 0;
         console.log('InitJiraFilters isBacklog'+isBacklog);
-    
+
         function filterNow(name) {
             console.log('filtering now ' + name + ' in backlog: ' + isBacklog);
-    
+
             if (isBacklog) {
                 filter(name, '.ghx-issue-compact div *.ghx-estimate', function(el) {
                     return el.parentElement.parentElement.parentElement
@@ -46,7 +46,7 @@
                 });
             }
         }
-    
+
         function filter(name, selector, elementToHideFn) {
             document.querySelectorAll(selector).forEach(x=>{
                 //handle unassigned issues
@@ -57,21 +57,24 @@
             }
             );
         }
-    
+
         function getAssigneName(el){
             var assigne = '';
             if(isBacklog){
                 // expected alt text is: "John Doe, IT1.22's avatar", "Profilbild von John Doe, IT1.22"
-                assigne = (el.alt || '').replace("'s avatar","").replace("Profilbild von ","");
+                assigne = (el.title || el.alt || '').replace("'s avatar","").replace("Profilbild von ","");
             }else{
                 // expected title text is: "Assignee: John Doe, IT1.22", "Bearbeiter: John Doe, IT1.22"
                 assigne = (el.title || el.alt).split(": ").length && (el.title || el.alt).split(": ")[1]
             }
-            return assigne.replace("Assignee: ","").replace("Bearbeiter: ","");
+            return assigne.replace("Assignee:","").replace("summary","")
+                .replace("panoramica di","").replace("Assegnatario:","")
+                .replace("Résumé —","").replace("Attribution:","")
+                .replace("Bearbeiter:","").replace("– Zusammenfassung","").trim();
         }
-    
+
         var avatars = new Map();
-    
+
         document.querySelectorAll('.ghx-avatar-img').forEach(x=>{
             var assigne = getAssigneName(x);
             if (assigne.length < 80) {
@@ -79,10 +82,10 @@
             }
         }
         );
-    
+
         console.log(avatars, avatars);
         var lastFilter = null;
-    
+
         function markFilteredAvatar(el) {
             if (lastFilter) {
                 lastFilter.style.border = "solid 3px white";
@@ -92,11 +95,11 @@
                 el.style.border = "solid 3px lightgreen";
             }
         }
-    
+
         var container = document.createElement('span');
         container.id = "custom_jira_filters";
         container.style = "padding-left:15px;";
-    
+
         for (var element of avatars.values()) {
             var el = element.cloneNode();
             el.classList.add('mp_m_blurb_vertical_wobble');
@@ -108,29 +111,29 @@
                 markFilteredAvatar(e.currentTarget);
                 filterNow(getAssigneName(e.currentTarget))
             });
-    
+
             container.appendChild(el);
         }
-    
+
         var clear = document.createElement('span');
         clear.classList.add('aui-button');
         clear.style["vertical-align"] = 'middle';
         clear.style["margin-left"] = '3px';
-    
+
         clear.innerText = 'Clear Filter';
         clear.addEventListener('click', function(e) {
             markFilteredAvatar(null);
             filterNow('')
         });
         container.appendChild(clear);
-    
+
         var t = document.querySelector('.subnav-container');
         t.appendChild(container);
     }
         //some css hover effect when hover over the avatars
         var style = document.createElement('style');
         style.type = 'text/css';
-    
+
         style.innerHTML = `
         .mp_m_blurb_vertical_wobble:hover {
                 -webkit-animation-name: hvr-wobble-vertical-sm;
@@ -141,7 +144,7 @@
                 animation-timing-function: ease-in-out;
                 -webkit-animation-iteration-count: 1;
                 animation-iteration-count: 1;}
-    
+
         @keyframes hvr-wobble-vertical-sm {
             16.65% {
                 -webkit-transform: translateY(4px);
@@ -162,6 +165,6 @@
                 -webkit-transform: translateY(0);
                 transform: translateY(0);}}`;
         document.getElementsByTagName('head')[0].appendChild(style);
-    
-    
+
+
     })();
